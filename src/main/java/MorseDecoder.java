@@ -53,8 +53,14 @@ public class MorseDecoder {
 
         double[] sampleBuffer = new double[BIN_SIZE * inputFile.getNumChannels()];
         for (int binIndex = 0; binIndex < totalBinCount; binIndex++) {
+
             // Get the right number of samples from the inputFile
+            inputFile.readFrames(sampleBuffer, BIN_SIZE);
+
             // Sum all the samples together and store them in the returnBuffer
+            for (double s : sampleBuffer) {
+                returnBuffer[binIndex] += Math.abs(s);
+            }
         }
         return returnBuffer;
     }
@@ -63,7 +69,7 @@ public class MorseDecoder {
     private static final double POWER_THRESHOLD = 10;
 
     /** Bin threshold for dots or dashes. Related to BIN_SIZE. You may need to modify this value. */
-    private static final int DASH_BIN_COUNT = 8;
+    private static final int DASH_BIN_COUNT = 16;
 
     /**
      * Convert power measurements to dots, dashes, and spaces.
@@ -81,13 +87,39 @@ public class MorseDecoder {
          * There are four conditions to handle. Symbols should only be output when you see
          * transitions. You will also have to store how much power or silence you have seen.
          */
+        double totalSilence = 0;
+        double totalSound = 0;
+        String morse = "";
 
-        // if ispower and waspower
-        // else if ispower and not waspower
-        // else if issilence and wassilence
-        // else if issilence and not wassilence
-
-        return "";
+        for (double d : powerMeasurements) {
+            System.out.println(d);
+            if (d > POWER_THRESHOLD && totalSound > 0) { // more power
+                totalSound++;
+            } else if (d > POWER_THRESHOLD && totalSound == 0) { // change to on
+                totalSound++;
+                if (totalSilence >= DASH_BIN_COUNT) {
+                    morse += " ";
+                   // System.out.println(morse);
+                }
+                totalSilence = 0;
+            } else if (d < POWER_THRESHOLD && totalSilence > 0) { // more silence
+                totalSilence++;
+            } else if (d < POWER_THRESHOLD && totalSilence == 0) { // change to silence
+                totalSilence++;
+                if (totalSound > DASH_BIN_COUNT) {
+                    morse += "-";
+                   // System.out.println(morse);
+                } else if (totalSound <= DASH_BIN_COUNT) {
+                    morse += ".";
+                   // System.out.println(morse);
+                }
+                totalSound = 0;
+            }
+            System.out.println("TotalSilence: " + totalSilence);
+            System.out.println("TotalSound: " + totalSound);
+            System.out.println("");
+        }
+        return morse;
     }
 
     /**
